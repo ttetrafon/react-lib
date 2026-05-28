@@ -9,13 +9,13 @@ export interface SvgProps {
   className?: string;
 }
 
-export function Svg({ name, fill = "#000000", hoverFill, className }: SvgProps) {
+export function Svg({ name, fill = "#000000", hoverFill, className = "" }: SvgProps) {
   return (
     <svg
-      className={`w-full h-full ${className || ""}`}
+      className={className}
       viewBox="0 -960 960 960"
-      width="100%"
       height="100%"
+      preserveAspectRatio="xMidYMid meet"
       fill={hoverFill || fill}
       xmlns="http://www.w3.org/2000/svg"
     >
