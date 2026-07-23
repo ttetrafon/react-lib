@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 type StorageType = "local" | "session";
 
@@ -7,41 +7,81 @@ function getStorage(type: StorageType): Storage | null {
   return type === "local" ? window.localStorage : window.sessionStorage;
 }
 
+// Same-tab pub/sub, keyed by "type:key", since native `storage` events
+// only fire in *other* tabs, not the one that made the change.
+const listeners = new Map<string, Set<() => void>>();
+
+function emitChange(cacheKey: string) {
+  listeners.get(cacheKey)?.forEach((cb) => cb());
+}
+
+function subscribe(cacheKey: string, type: StorageType) {
+  return (callback: () => void) => {
+    if (!listeners.has(cacheKey)) listeners.set(cacheKey, new Set());
+    listeners.get(cacheKey)!.add(callback);
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.storageArea === getStorage(type)) callback();
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      listeners.get(cacheKey)!.delete(callback);
+      window.removeEventListener("storage", onStorage);
+    };
+  };
+}
+
 function useStorage<T>(
   key: string,
   defaultValue: T | (() => T),
   type: StorageType
-): [T, React.Dispatch<React.SetStateAction<T>>, () => void] {
-  // render the default on first pass
-  const [value, setValue] = useState<T>(() =>
-    typeof defaultValue === "function" ? (defaultValue as () => T)() : defaultValue
+): [T, (value: T | ((prev: T) => T)) => void, () => void] {
+  const cacheKey = `${type}:${key}`;
+
+  // Snapshots must return a stable primitive (raw JSON string), not a
+  // freshly-parsed object each call — otherwise Object.is() never matches
+  // and you get an infinite render loop.
+  const getSnapshot = useCallback(() => {
+    return getStorage(type)?.getItem(key) ?? null;
+  }, [key, type]);
+
+  const getServerSnapshot = useCallback(() => null, []);
+
+  const subscribeFn = useCallback(subscribe(cacheKey, type), [cacheKey, type]);
+
+  const jsonValue = useSyncExternalStore(subscribeFn, getSnapshot, getServerSnapshot);
+
+  const resolveDefault = () =>
+    typeof defaultValue === "function" ? (defaultValue as () => T)() : defaultValue;
+
+  const value: T = jsonValue != null ? JSON.parse(jsonValue) : resolveDefault();
+
+  const setValue = useCallback(
+    (newValue: T | ((prev: T) => T)) => {
+      const storage = getStorage(type);
+      if (!storage) return;
+
+      const currentJson = storage.getItem(key);
+      const currentValue: T = currentJson != null ? JSON.parse(currentJson) : resolveDefault();
+
+      const resolved =
+        typeof newValue === "function" ? (newValue as (prev: T) => T)(currentValue) : newValue;
+
+      if (resolved === undefined) {
+        storage.removeItem(key);
+      } else {
+        storage.setItem(key, JSON.stringify(resolved));
+      }
+      emitChange(cacheKey);
+    },
+    [key, type, cacheKey]
   );
 
-  // on mount (client only), pull in whatever's actually in storage
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    const storage = getStorage(type);
-    if (!storage) return;
-    const jsonValue = storage.getItem(key);
-    if (jsonValue != null) setValue(JSON.parse(jsonValue));
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return; // don't overwrite storage with the default before we've read it
-
-    const storage = getStorage(type);
-    if (!storage) return;
-    if (value === undefined) {
-      storage.removeItem(key);
-      return;
-    }
-    storage.setItem(key, JSON.stringify(value));
-  }, [key, value, type, hydrated]);
-
   const remove = useCallback(() => {
-    setValue(undefined as unknown as T);
-  }, []);
+    getStorage(type)?.removeItem(key);
+    emitChange(cacheKey);
+  }, [key, type, cacheKey]);
 
   return [value, setValue, remove];
 }
