@@ -5,11 +5,10 @@ const DEFAULT_OPTIONS = {
 };
 
 export default function useFetch(url: string, options: object = {}, dependencies: any[] = []) {
-  return useAsync(() => {
-    return fetch(url, { ...DEFAULT_OPTIONS, ...options })
-      .then(res => {
-        if (res.ok) return res.json();
-        return res.json().then(json => Promise.reject(json));
-      })
+  return useAsync(async () => {
+    const res = await fetch(url, { ...DEFAULT_OPTIONS, ...options });
+    if (res.ok) return res.json();
+    const json = await res.json();
+    return await Promise.reject(json);
   }, dependencies);
 }

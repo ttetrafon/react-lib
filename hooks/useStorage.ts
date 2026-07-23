@@ -1,29 +1,55 @@
 import { useCallback, useEffect, useState } from "react";
 
-function useStorage(key: string, defaultValue: object | Function, storageObject: Storage): [object, Function, Function] {
-  const [value, setValue] = useState(() => {
-    const jsonValue = storageObject.getItem(key);
-    if (jsonValue != null) return JSON.parse(jsonValue);
+type StorageType = "local" | "session";
 
-    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
-  });
+function getStorage(type: StorageType): Storage | null {
+  if (typeof window === "undefined") return null;
+  return type === "local" ? window.localStorage : window.sessionStorage;
+}
+
+function useStorage<T>(
+  key: string,
+  defaultValue: T | (() => T),
+  type: StorageType
+): [T, React.Dispatch<React.SetStateAction<T>>, () => void] {
+  // render the default on first pass
+  const [value, setValue] = useState<T>(() =>
+    typeof defaultValue === "function" ? (defaultValue as () => T)() : defaultValue
+  );
+
+  // on mount (client only), pull in whatever's actually in storage
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const storage = getStorage(type);
+    if (!storage) return;
+    const jsonValue = storage.getItem(key);
+    if (jsonValue != null) setValue(JSON.parse(jsonValue));
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
-    if (value === undefined) return storageObject.removeItem(key);
-    storageObject.setItem(key, JSON.stringify(value));
-  }, [key, value, storageObject]);
+    if (!hydrated) return; // don't overwrite storage with the default before we've read it
+
+    const storage = getStorage(type);
+    if (!storage) return;
+    if (value === undefined) {
+      storage.removeItem(key);
+      return;
+    }
+    storage.setItem(key, JSON.stringify(value));
+  }, [key, value, type, hydrated]);
 
   const remove = useCallback(() => {
-    setValue(undefined);
+    setValue(undefined as unknown as T);
   }, []);
 
   return [value, setValue, remove];
 }
 
-export function useLocalStorage(key: string, defaultValue: any) {
-  return useStorage(key, defaultValue, window.localStorage);
+export function useLocalStorage<T>(key: string, defaultValue: T | (() => T)) {
+  return useStorage(key, defaultValue, "local");
 }
 
-export function useSessionStorage(key: string, defaultValue: any) {
-  return useStorage(key, defaultValue, window.sessionStorage);
+export function useSessionStorage<T>(key: string, defaultValue: T | (() => T)) {
+  return useStorage(key, defaultValue, "session");
 }

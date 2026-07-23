@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-export default function useArray(defaultValue: any[]) {
+export default function useArray<T>(defaultValue: T[]) {
   const [array, setArray] = useState<any[]>(defaultValue);
 
-  function push(element: any): void {
+  function push(element: T): void {
     setArray(a => [...a, element]);
   }
 
@@ -11,7 +11,7 @@ export default function useArray(defaultValue: any[]) {
     setArray(a => a.filter(callback));
   }
 
-  function update(index: number, newElement: any): void {
+  function update(index: number, newElement: T): void {
     setArray(a => [
       ...a.slice(0, index),
       newElement,

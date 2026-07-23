@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-export default function useStateWithHistory(defaultValue: any, capacity: number = 10) {
-  const [value, setValue] = useState<any>(defaultValue);
-  const historyRef = useRef<any[]>([defaultValue]);
+export default function useStateWithHistory<T>(defaultValue: T, capacity: number = 10) {
+  const [value, setValue] = useState<T>(defaultValue);
+  const historyRef = useRef<T[]>([defaultValue]);
   const pointerRef = useRef<number>(0);
 
-  const set = useCallback((v: any) => {
+  const set = useCallback((v: T) => {
     const resolvedValue = typeof v === 'function' ? v(value) : v;
     if (historyRef.current[pointerRef.current] !== resolvedValue) {
       if (pointerRef.current < historyRef.current.length - 1) {
