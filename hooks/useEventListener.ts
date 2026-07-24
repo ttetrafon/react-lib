@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function useEventListener(eventType: string, callback: Function, element: HTMLElement | Window = window) {
+export default function useEventListener(eventType: string, callback: Function, element: HTMLElement | Window | MediaQueryList = window) {
   const callbackRef = useRef<Function>(callback);
 
   useEffect(() => {
