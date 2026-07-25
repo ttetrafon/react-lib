@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 
 export type ElementSize = {
   width: number,
@@ -28,7 +28,6 @@ export default function useSize(ref: RefObject<HTMLElement | null>): ElementSize
 
     const observer = new ResizeObserver(([entry]) => {
       const ob: readonly ResizeObserverSize[] = entry.contentBoxSize;
-      console.log(`...size observer:`, ob);
       setSize({
         width: ob[0].inlineSize,
         height: ob[0].blockSize
