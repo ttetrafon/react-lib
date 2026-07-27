@@ -10,7 +10,7 @@ const zero: ElementSize = {
   height: 0,
 }
 
-export default function useSize(ref: RefObject<HTMLElement | null>): ElementSize {
+export function useSize(ref: RefObject<HTMLElement | null>): ElementSize {
   const [size, setSize] = useState<ElementSize>(() => {
     if (ref && ref.current) {
       return {

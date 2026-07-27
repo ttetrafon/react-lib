@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
-export default function useEventListener(eventType: string, callback: Function, element: HTMLElement | Window | MediaQueryList = window) {
+export default function useEventListener<T>(eventType: string, callback: Function, element: HTMLElement | Window | MediaQueryList | null = window) {
   const callbackRef = useRef<Function>(callback);
 
   useEffect(() => {
@@ -9,8 +9,10 @@ export default function useEventListener(eventType: string, callback: Function, 
 
   useEffect(() => {
     const handler = (e: Event) => callbackRef.current(e);
-    element.addEventListener(eventType, handler);
+    if (element) element.addEventListener(eventType, handler);
 
-    return () => element.removeEventListener(eventType, handler);
+    return () => {
+      if (element) return element.removeEventListener(eventType, handler);
+    };
   }, [eventType, element]);
 }
