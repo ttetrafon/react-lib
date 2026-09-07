@@ -27,7 +27,10 @@ export function useSize(ref: RefObject<HTMLElement | null>): ElementSize {
     if (!ref.current) return;
 
     const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
       const ob: readonly ResizeObserverSize[] = entry.contentBoxSize;
+
+      if (!ob || !ob[0]) return;
       setSize({
         width: ob[0].inlineSize,
         height: ob[0].blockSize

@@ -14,7 +14,10 @@ export default function useOnScreen(ref: RefObject<HTMLElement | null>, rootMarg
     if (!ref.current) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting), { rootMargin }
+      ([entry]) => {
+        if (!entry) return;
+        setIsVisible(entry.isIntersecting)
+      }, { rootMargin }
     );
     observer.observe(ref.current);
 

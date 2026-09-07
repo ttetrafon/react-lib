@@ -5,8 +5,8 @@ export default function useStateWithHistory<T>(defaultValue: T, capacity: number
   const historyRef = useRef<T[]>([defaultValue]);
   const pointerRef = useRef<number>(0);
 
-  const set = useCallback((v: T) => {
-    const resolvedValue = typeof v === 'function' ? v(value) : v;
+  const set = useCallback((v: T | ((prevState: T) => T)) => {
+    const resolvedValue = typeof v === 'function' ? (v as (prevState: T) => T)(value) : v;
     if (historyRef.current[pointerRef.current] !== resolvedValue) {
       if (pointerRef.current < historyRef.current.length - 1) {
         historyRef.current.splice(pointerRef.current + 1);
@@ -43,6 +43,8 @@ export default function useStateWithHistory<T>(defaultValue: T, capacity: number
   }, []);
 
   function setCurrent() {
-    setValue(historyRef.current[pointerRef.current]);
+    setValue(historyRef.current[pointerRef.current]!);
   }
+
+  return [value, set] as const;
 }

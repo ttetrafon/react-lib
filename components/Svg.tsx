@@ -1,4 +1,4 @@
-import { svgs, type SvgName } from "util/lib/icons/googleIconSvgs";
+import { svgs, type SvgName } from "../../lib/icons/googleIconSvgs";
 
 export const svgNames = Object.keys(svgs) as SvgName[];
 
